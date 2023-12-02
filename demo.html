@@ -1,0 +1,522 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 900px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+             #config {
+                 float: left;
+                 width: 400px;
+                 height: 600px;
+             }
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="abstract artificial intelligence (ai)">abstract artificial intelligence (ai)</option>
+                                
+                                    <option value="cancer research">cancer research</option>
+                                
+                                    <option value="ai applied to oncology">ai applied to oncology</option>
+                                
+                                    <option value="ai model development">ai model development</option>
+                                
+                                    <option value="ai models">ai models</option>
+                                
+                                    <option value="broad spectrum of publications and studies">broad spectrum of publications and studies</option>
+                                
+                                    <option value="clinic integration">clinic integration</option>
+                                
+                                    <option value="deep learning">deep learning</option>
+                                
+                                    <option value="machine learning models">machine learning models</option>
+                                
+                                    <option value="routine maintenance">routine maintenance</option>
+                                
+                                    <option value="static process">static process</option>
+                                
+                                    <option value="traditional machine learning techniques">traditional machine learning techniques</option>
+                                
+                                    <option value="aspects of oncology research">aspects of oncology research</option>
+                                
+                                    <option value="ai applications">ai applications</option>
+                                
+                                    <option value="auc">auc</option>
+                                
+                                    <option value="auroc">auroc</option>
+                                
+                                    <option value="machine learning model">machine learning model</option>
+                                
+                                    <option value="class imbalance">class imbalance</option>
+                                
+                                    <option value="clinical use">clinical use</option>
+                                
+                                    <option value="good">good</option>
+                                
+                                    <option value="model validation">model validation</option>
+                                
+                                    <option value="optimal model">optimal model</option>
+                                
+                                    <option value="autoencoder">autoencoder</option>
+                                
+                                    <option value="cnn models">cnn models</option>
+                                
+                                    <option value="cnns">cnns</option>
+                                
+                                    <option value="black box">black box</option>
+                                
+                                    <option value="cancer care">cancer care</option>
+                                
+                                    <option value="shifting paradigm in cancer care">shifting paradigm in cancer care</option>
+                                
+                                    <option value="carefully preprocessed">carefully preprocessed</option>
+                                
+                                    <option value="images used for cnns">images used for cnns</option>
+                                
+                                    <option value="conventional machine learning models">conventional machine learning models</option>
+                                
+                                    <option value="convolutional neural networks">convolutional neural networks</option>
+                                
+                                    <option value="image classification">image classification</option>
+                                
+                                    <option value="manual feature curation">manual feature curation</option>
+                                
+                                    <option value="structured data">structured data</option>
+                                
+                                    <option value="transfer learning">transfer learning</option>
+                                
+                                    <option value="cross-validation">cross-validation</option>
+                                
+                                    <option value="data quality">data quality</option>
+                                
+                                    <option value="model selection">model selection</option>
+                                
+                                    <option value="ensemble approaches">ensemble approaches</option>
+                                
+                                    <option value="increasing training set size">increasing training set size</option>
+                                
+                                    <option value="manually curated predictive features">manually curated predictive features</option>
+                                
+                                    <option value="gene expression profiling">gene expression profiling</option>
+                                
+                                    <option value="large cancer datasets">large cancer datasets</option>
+                                
+                                    <option value="microarrays">microarrays</option>
+                                
+                                    <option value="genie">genie</option>
+                                
+                                    <option value="genomic dna profiling">genomic dna profiling</option>
+                                
+                                    <option value="targeted panels">targeted panels</option>
+                                
+                                    <option value="high-dimensionality datasets">high-dimensionality datasets</option>
+                                
+                                    <option value="availability of">availability of</option>
+                                
+                                    <option value="integrated data sources">integrated data sources</option>
+                                
+                                    <option value="prediction accuracy">prediction accuracy</option>
+                                
+                                    <option value="publicly available datasets">publicly available datasets</option>
+                                
+                                    <option value="small anticancer molecules">small anticancer molecules</option>
+                                
+                                    <option value="metabric">metabric</option>
+                                
+                                    <option value="pcawg">pcawg</option>
+                                
+                                    <option value="predictive models">predictive models</option>
+                                
+                                    <option value="tcga">tcga</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+            <div id="config"></div>
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"group": 1, "id": "abstract artificial intelligence (ai)", "label": "abstract artificial intelligence (ai)", "shape": "dot", "size": 1}, {"group": 1, "id": "cancer research", "label": "cancer research", "shape": "dot", "size": 1}, {"group": 3, "id": "ai applied to oncology", "label": "ai applied to oncology", "shape": "dot", "size": 9}, {"group": 3, "id": "ai model development", "label": "ai model development", "shape": "dot", "size": 9}, {"group": 3, "id": "ai models", "label": "ai models", "shape": "dot", "size": 3}, {"group": 3, "id": "broad spectrum of publications and studies", "label": "broad spectrum of publications and studies", "shape": "dot", "size": 2}, {"group": 3, "id": "clinic integration", "label": "clinic integration", "shape": "dot", "size": 3}, {"group": 3, "id": "deep learning", "label": "deep learning", "shape": "dot", "size": 3}, {"group": 3, "id": "machine learning models", "label": "machine learning models", "shape": "dot", "size": 3}, {"group": 3, "id": "routine maintenance", "label": "routine maintenance", "shape": "dot", "size": 2}, {"group": 3, "id": "static process", "label": "static process", "shape": "dot", "size": 2}, {"group": 3, "id": "traditional machine learning techniques", "label": "traditional machine learning techniques", "shape": "dot", "size": 2}, {"group": 2, "id": "aspects of oncology research", "label": "aspects of oncology research", "shape": "dot", "size": 1}, {"group": 2, "id": "ai applications", "label": "ai applications", "shape": "dot", "size": 1}, {"group": 4, "id": "auc", "label": "auc", "shape": "dot", "size": 3}, {"group": 4, "id": "auroc", "label": "auroc", "shape": "dot", "size": 7}, {"group": 4, "id": "machine learning model", "label": "machine learning model", "shape": "dot", "size": 7}, {"group": 4, "id": "class imbalance", "label": "class imbalance", "shape": "dot", "size": 3}, {"group": 4, "id": "clinical use", "label": "clinical use", "shape": "dot", "size": 2}, {"group": 4, "id": "good", "label": "good", "shape": "dot", "size": 2}, {"group": 4, "id": "model validation", "label": "model validation", "shape": "dot", "size": 2}, {"group": 4, "id": "optimal model", "label": "optimal model", "shape": "dot", "size": 2}, {"group": 5, "id": "autoencoder", "label": "autoencoder", "shape": "dot", "size": 2}, {"group": 5, "id": "cnn models", "label": "cnn models", "shape": "dot", "size": 11}, {"group": 5, "id": "cnns", "label": "cnns", "shape": "dot", "size": 11}, {"group": 5, "id": "black box", "label": "black box", "shape": "dot", "size": 2}, {"group": 7, "id": "cancer care", "label": "cancer care", "shape": "dot", "size": 1}, {"group": 7, "id": "shifting paradigm in cancer care", "label": "shifting paradigm in cancer care", "shape": "dot", "size": 1}, {"group": 5, "id": "carefully preprocessed", "label": "carefully preprocessed", "shape": "dot", "size": 3}, {"group": 5, "id": "images used for cnns", "label": "images used for cnns", "shape": "dot", "size": 3}, {"group": 5, "id": "conventional machine learning models", "label": "conventional machine learning models", "shape": "dot", "size": 3}, {"group": 5, "id": "convolutional neural networks", "label": "convolutional neural networks", "shape": "dot", "size": 3}, {"group": 5, "id": "image classification", "label": "image classification", "shape": "dot", "size": 3}, {"group": 5, "id": "manual feature curation", "label": "manual feature curation", "shape": "dot", "size": 3}, {"group": 5, "id": "structured data", "label": "structured data", "shape": "dot", "size": 2}, {"group": 5, "id": "transfer learning", "label": "transfer learning", "shape": "dot", "size": 2}, {"group": 8, "id": "cross-validation", "label": "cross-validation", "shape": "dot", "size": 2}, {"group": 8, "id": "data quality", "label": "data quality", "shape": "dot", "size": 5}, {"group": 8, "id": "model selection", "label": "model selection", "shape": "dot", "size": 5}, {"group": 8, "id": "ensemble approaches", "label": "ensemble approaches", "shape": "dot", "size": 2}, {"group": 8, "id": "increasing training set size", "label": "increasing training set size", "shape": "dot", "size": 2}, {"group": 8, "id": "manually curated predictive features", "label": "manually curated predictive features", "shape": "dot", "size": 2}, {"group": 9, "id": "gene expression profiling", "label": "gene expression profiling", "shape": "dot", "size": 2}, {"group": 9, "id": "large cancer datasets", "label": "large cancer datasets", "shape": "dot", "size": 9}, {"group": 9, "id": "microarrays", "label": "microarrays", "shape": "dot", "size": 2}, {"group": 10, "id": "genie", "label": "genie", "shape": "dot", "size": 1}, {"group": 9, "id": "genomic dna profiling", "label": "genomic dna profiling", "shape": "dot", "size": 2}, {"group": 9, "id": "targeted panels", "label": "targeted panels", "shape": "dot", "size": 2}, {"group": 6, "id": "high-dimensionality datasets", "label": "high-dimensionality datasets", "shape": "dot", "size": 1}, {"group": 6, "id": "availability of", "label": "availability of", "shape": "dot", "size": 1}, {"group": 11, "id": "integrated data sources", "label": "integrated data sources", "shape": "dot", "size": 3}, {"group": 11, "id": "prediction accuracy", "label": "prediction accuracy", "shape": "dot", "size": 1}, {"group": 11, "id": "publicly available datasets", "label": "publicly available datasets", "shape": "dot", "size": 1}, {"group": 11, "id": "small anticancer molecules", "label": "small anticancer molecules", "shape": "dot", "size": 1}, {"group": 12, "id": "metabric", "label": "metabric", "shape": "dot", "size": 1}, {"group": 9, "id": "pcawg", "label": "pcawg", "shape": "dot", "size": 1}, {"group": 9, "id": "predictive models", "label": "predictive models", "shape": "dot", "size": 1}, {"group": 9, "id": "tcga", "label": "tcga", "shape": "dot", "size": 1}]);
+                  edges = new vis.DataSet([{"from": "abstract artificial intelligence (ai)", "title": "AI is rapidly reshaping cancer research.", "to": "cancer research", "width": 1.0}, {"from": "ai applied to oncology", "title": "contextual proximity", "to": "ai model development", "width": 1.0}, {"from": "ai applied to oncology", "title": "contextual proximity", "to": "ai models", "width": 0.5}, {"from": "ai applied to oncology", "title": "contextual proximity", "to": "broad spectrum of publications and studies", "width": 0.5}, {"from": "ai applied to oncology", "title": "contextual proximity", "to": "clinic integration", "width": 0.5}, {"from": "ai applied to oncology", "title": "contextual proximity", "to": "deep learning", "width": 0.5}, {"from": "ai applied to oncology", "title": "contextual proximity", "to": "machine learning models", "width": 0.5}, {"from": "ai applied to oncology", "title": "contextual proximity", "to": "routine maintenance", "width": 0.5}, {"from": "ai applied to oncology", "title": "contextual proximity", "to": "static process", "width": 0.5}, {"from": "ai applied to oncology", "title": "The review also covered use cases where traditional machine learning techniques have been used very effectively in AI applied to oncology.,contextual proximity", "to": "traditional machine learning techniques", "width": 1.5}, {"from": "ai model development", "title": "contextual proximity", "to": "ai models", "width": 0.5}, {"from": "ai model development", "title": "contextual proximity", "to": "broad spectrum of publications and studies", "width": 0.5}, {"from": "ai model development", "title": "contextual proximity", "to": "clinic integration", "width": 0.5}, {"from": "ai model development", "title": "contextual proximity", "to": "deep learning", "width": 0.5}, {"from": "ai model development", "title": "contextual proximity", "to": "machine learning models", "width": 0.5}, {"from": "ai model development", "title": "contextual proximity", "to": "routine maintenance", "width": 0.5}, {"from": "ai model development", "title": "contextual proximity", "to": "static process", "width": 0.5}, {"from": "ai model development", "title": "contextual proximity", "to": "traditional machine learning techniques", "width": 0.5}, {"from": "ai models", "title": "This review highlighted the limitations and challenges that pave the path toward integrating AI models into clinical practice.", "to": "clinic integration", "width": 1.0}, {"from": "aspects of oncology research", "title": "These applications range from detection and classification of cancer, to molecular characterization of tumors and their microenvironment, to drug discovery and repurposing, to predicting treatment outcomes for patients.", "to": "ai applications", "width": 1.0}, {"from": "auc", "title": "contextual proximity", "to": "auroc", "width": 0.75}, {"from": "auc", "title": "contextual proximity", "to": "machine learning model", "width": 0.75}, {"from": "auc", "title": "for datasets that have a class imbalance, AUPRC is a preferred alternative to AUC", "to": "class imbalance", "width": 1.0}, {"from": "auroc", "title": "contextual proximity", "to": "class imbalance", "width": 0.75}, {"from": "auroc", "title": "contextual proximity", "to": "clinical use", "width": 0.75}, {"from": "auroc", "title": "contextual proximity", "to": "good", "width": 0.75}, {"from": "auroc", "title": "contextual proximity", "to": "machine learning model", "width": 2.25}, {"from": "auroc", "title": "contextual proximity", "to": "model validation", "width": 0.75}, {"from": "auroc", "title": "contextual proximity", "to": "optimal model", "width": 0.75}, {"from": "autoencoder", "title": "contextual proximity", "to": "cnn models", "width": 0.5}, {"from": "autoencoder", "title": "contextual proximity", "to": "cnns", "width": 0.5}, {"from": "black box", "title": "contextual proximity", "to": "cnn models", "width": 0.5}, {"from": "black box", "title": "It is difficult to tell what features are learned by the CNNs, making them what many have referred to as a \u2018black box\u2019.,contextual proximity", "to": "cnns", "width": 1.5}, {"from": "cancer care", "title": "As these advances start penetrating the clinic, we foresee a shifting paradigm in cancer care becoming strongly driven by AI.", "to": "shifting paradigm in cancer care", "width": 1.0}, {"from": "carefully preprocessed", "title": "contextual proximity", "to": "cnn models", "width": 0.5}, {"from": "carefully preprocessed", "title": "contextual proximity", "to": "cnns", "width": 0.5}, {"from": "carefully preprocessed", "title": "Images used for CNNs should be carefully preprocessed to reduce the risk that the model learns from image artifacts.", "to": "images used for cnns", "width": 1.0}, {"from": "class imbalance", "title": "contextual proximity", "to": "machine learning model", "width": 0.75}, {"from": "clinical use", "title": "contextual proximity", "to": "machine learning model", "width": 0.75}, {"from": "cnn models", "title": "contextual proximity", "to": "cnns", "width": 1.0}, {"from": "cnn models", "title": "contextual proximity", "to": "conventional machine learning models", "width": 0.5}, {"from": "cnn models", "title": "contextual proximity", "to": "convolutional neural networks", "width": 0.5}, {"from": "cnn models", "title": "contextual proximity", "to": "image classification", "width": 0.5}, {"from": "cnn models", "title": "contextual proximity", "to": "images used for cnns", "width": 0.5}, {"from": "cnn models", "title": "contextual proximity", "to": "manual feature curation", "width": 0.5}, {"from": "cnn models", "title": "contextual proximity", "to": "structured data", "width": 0.5}, {"from": "cnn models", "title": "Transfer learning uses images from a large collection of natural objects (such as in ImageNet) to train the initial layers of a model and then uses disease-specific data to fine-tune the training parameters in the last layers.,contextual proximity", "to": "transfer learning", "width": 1.5}, {"from": "cnns", "title": "contextual proximity", "to": "conventional machine learning models", "width": 0.5}, {"from": "cnns", "title": "contextual proximity", "to": "convolutional neural networks", "width": 0.5}, {"from": "cnns", "title": "contextual proximity", "to": "image classification", "width": 0.5}, {"from": "cnns", "title": "contextual proximity", "to": "images used for cnns", "width": 0.5}, {"from": "cnns", "title": "contextual proximity", "to": "manual feature curation", "width": 0.5}, {"from": "cnns", "title": "contextual proximity", "to": "structured data", "width": 0.5}, {"from": "cnns", "title": "contextual proximity", "to": "transfer learning", "width": 0.5}, {"from": "conventional machine learning models", "title": "Unlike conventional machine learning models that frequently require manual feature curation, CNNs automatically learn relevant features.", "to": "manual feature curation", "width": 1.0}, {"from": "convolutional neural networks", "title": "CNNs are most popular deep learning architectures used for image classification in cancer.", "to": "image classification", "width": 1.0}, {"from": "cross-validation", "title": "To ensure that a model is not overfitting to the training dataset, cross-validation can be employed during the data cleaning process. Cross-validation involves splitting the available data into multiple subsets and training separate models on each subset while validating them on the remaining subsets. This process helps to mitigate overfitting by ensuring that the model\u0027s performance is evaluated based on previously unseen data.,contextual proximity", "to": "data quality", "width": 2.5}, {"from": "cross-validation", "title": "contextual proximity", "to": "model selection", "width": 0.5}, {"from": "data quality", "title": "contextual proximity", "to": "ensemble approaches", "width": 1.5}, {"from": "data quality", "title": "contextual proximity", "to": "increasing training set size", "width": 1.5}, {"from": "data quality", "title": "contextual proximity", "to": "manually curated predictive features", "width": 1.5}, {"from": "data quality", "title": "The importance of high-quality data cannot be understated when it comes to model selection. A poorly curated dataset can result in inaccurate or suboptimal models, as the model\u0027s performance will be heavily influenced by the quality of its training data.,contextual proximity", "to": "model selection", "width": 4.0}, {"from": "deep learning", "title": "This review placed special emphasis on deep learning as a technique for making machine learning models.", "to": "machine learning models", "width": 1.0}, {"from": "ensemble approaches", "title": "contextual proximity", "to": "model selection", "width": 0.5}, {"from": "gene expression profiling", "title": "contextual proximity", "to": "large cancer datasets", "width": 1.25}, {"from": "gene expression profiling", "title": "Gene expression profiling has evolved from genome-wide microarrays to RNA sequencing (RNA-seq) and then to more granular single-cell RNA-seq (scRNA-seq).", "to": "microarrays", "width": 1.0}, {"from": "genie", "title": "contextual proximity", "to": "large cancer datasets", "width": 1.25}, {"from": "genomic dna profiling", "title": "contextual proximity", "to": "large cancer datasets", "width": 1.25}, {"from": "genomic dna profiling", "title": "Genomic DNA profiling has expanded from targeted panels to whole exomes to whole genomes.", "to": "targeted panels", "width": 1.0}, {"from": "good", "title": "contextual proximity", "to": "machine learning model", "width": 0.75}, {"from": "high-dimensionality datasets", "title": "High-dimensionality datasets coupled with advances in high-performance computing and innovative deep learning architectures have led to an explosion of AI use in various aspects of oncology research.", "to": "availability of", "width": 1.0}, {"from": "increasing training set size", "title": "contextual proximity", "to": "model selection", "width": 0.5}, {"from": "integrated data sources", "title": "contextual proximity", "to": "prediction accuracy", "width": 0.75}, {"from": "integrated data sources", "title": "The sheer breadth and diversity of publicly available datasets presents a unique opportunity to integrate various data types, as demonstrated by the benefits of such integration (context).,contextual proximity", "to": "publicly available datasets", "width": 1.75}, {"from": "integrated data sources", "title": "Madhukar and colleagues used an integrative approach to predict the targets and mechanisms of action of small anticancer molecules, highlighting the benefits of integrating multiple data types for prediction purposes (6).,contextual proximity", "to": "small anticancer molecules", "width": 1.75}, {"from": "large cancer datasets", "title": "METABRIC is a compilation of large numbers of cancer genomic profiles that has been made publicly available.,contextual proximity", "to": "metabric", "width": 2.25}, {"from": "large cancer datasets", "title": "contextual proximity", "to": "microarrays", "width": 1.25}, {"from": "large cancer datasets", "title": "The Pan-Cancer Analysis of Whole Genomes (PCAWG) has compiled a large number of cancer genomic profiles and made them publicly available.,contextual proximity", "to": "pcawg", "width": 2.25}, {"from": "large cancer datasets", "title": "contextual proximity", "to": "predictive models", "width": 1.25}, {"from": "large cancer datasets", "title": "contextual proximity", "to": "targeted panels", "width": 1.25}, {"from": "large cancer datasets", "title": "TCGA is a large publicly available compilation of tumor profiles, including genomics, epigenomics, proteomics, histopathology, and radiology images.,contextual proximity", "to": "tcga", "width": 2.25}, {"from": "machine learning model", "title": "the importance of validating a machine learning model on external independent datasets to ensure stability and generalization,contextual proximity", "to": "model validation", "width": 1.75}, {"from": "machine learning model", "title": "contextual proximity", "to": "optimal model", "width": 0.75}, {"from": "manually curated predictive features", "title": "contextual proximity", "to": "model selection", "width": 0.5}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": true,
+        "filter": [
+            "physics"
+        ]
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "forceAtlas2Based": {
+            "avoidOverlap": 0,
+            "centralGravity": 0.015,
+            "damping": 0.4,
+            "gravitationalConstant": -31,
+            "springConstant": 0.08,
+            "springLength": 100
+        },
+        "solver": "forceAtlas2Based",
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+                  // if this network requires displaying the configure window,
+                  // put it in its div
+                  options.configure["container"] = document.getElementById("config");
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
